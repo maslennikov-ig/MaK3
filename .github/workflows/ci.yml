@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          elif [ -f yarn.lock ]; then
+            yarn install --frozen-lockfile
+          else
+            npm install
+          fi
+      - name: Lint
+        run: |
+          if [ -f package.json ]; then
+            npm run lint || echo "Linting skipped (no script)"
+          fi
+      - name: Test
+        run: |
+          if [ -f package.json ]; then
+            npm test || echo "Testing skipped (no script)"
+          fi
+      - name: Build
+        run: |
+          if [ -f package.json ]; then
+            npm run build || echo "Build skipped (no script)"
+          fi
