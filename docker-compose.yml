@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  frontend:
+    image: node:18-alpine
+    container_name: mak3-frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    depends_on:
+      - backend
+    networks:
+      - mak3-network
+
+  backend:
+    image: node:18-alpine
+    container_name: mak3-backend
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    ports:
+      - "3001:3001"
+    command: sh -c "npm install && npm run start:dev"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/mak3
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=development_jwt_secret
+      - JWT_EXPIRES_IN=1d
+      - REFRESH_TOKEN_SECRET=development_refresh_token_secret
+      - REFRESH_TOKEN_EXPIRES_IN=7d
+    depends_on:
+      - postgres
+      - redis
+      - elasticsearch
+    networks:
+      - mak3-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: mak3-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mak3
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./.pgdata:/var/lib/postgresql/data
+    networks:
+      - mak3-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: mak3-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./.redisdata:/data
+    networks:
+      - mak3-network
+
+  elasticsearch:
+    image: elasticsearch:8.10.4
+    container_name: mak3-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - ./.esdata:/usr/share/elasticsearch/data
+    networks:
+      - mak3-network
+
+networks:
+  mak3-network:
+    driver: bridge

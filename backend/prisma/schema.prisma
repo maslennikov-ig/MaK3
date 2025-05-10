@@ -1,0 +1,227 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Пользователи и роли
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  role          Role      @relation(fields: [roleId], references: [id])
+  roleId        String
+  
+  // Связи
+  assignedClients Client[] @relation("AssignedToUser")
+  assignedDeals   Deal[]   @relation("AssignedToUser")
+}
+
+model Role {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  // Связи
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String       @id @default(uuid())
+  action      String       // например, create:client, read:deal
+  subject     String       // например, client, deal
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  // Связи
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  role        Role        @relation(fields: [roleId], references: [id])
+  roleId      String
+  permission  Permission  @relation(fields: [permissionId], references: [id])
+  permissionId String
+  createdAt   DateTime    @default(now())
+  
+  @@id([roleId, permissionId])
+}
+
+// Партнеры и франчайзи
+model Partner {
+  id            String    @id @default(uuid())
+  name          String
+  type          PartnerType
+  email         String?
+  phone         String?
+  address       String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Связи
+  clients       Client[]
+  deals         Deal[]
+}
+
+enum PartnerType {
+  PARTNER
+  FRANCHISEE
+}
+
+// Клиенты и лиды
+model Client {
+  id            String    @id @default(uuid())
+  firstName     String
+  lastName      String
+  middleName    String?
+  phone         String    @unique
+  email         String?   @unique
+  source        String    // Источник клиента (позже может стать enum или связью)
+  status        String    // Статус клиента (позже может стать enum или связью)
+  notes         String?
+  isLead        Boolean   @default(true) // true = лид, false = клиент
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Связи
+  assignedTo    User?     @relation("AssignedToUser", fields: [assignedToId], references: [id])
+  assignedToId  String?
+  partner       Partner?  @relation(fields: [partnerId], references: [id])
+  partnerId     String?
+  deals         Deal[]
+  history       ClientHistory[]
+  comments      ClientComment[]
+  attachments   ClientAttachment[]
+}
+
+model ClientHistory {
+  id            String    @id @default(uuid())
+  client        Client    @relation(fields: [clientId], references: [id])
+  clientId      String
+  field         String    // Измененное поле
+  oldValue      String?   // Старое значение
+  newValue      String?   // Новое значение
+  changedBy     String    // ID пользователя, внесшего изменение
+  changedAt     DateTime  @default(now())
+}
+
+model ClientComment {
+  id            String    @id @default(uuid())
+  client        Client    @relation(fields: [clientId], references: [id])
+  clientId      String
+  content       String
+  createdBy     String    // ID пользователя, создавшего комментарий
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model ClientAttachment {
+  id            String    @id @default(uuid())
+  client        Client    @relation(fields: [clientId], references: [id])
+  clientId      String
+  filename      String
+  originalName  String
+  mimeType      String
+  size          Int
+  path          String
+  uploadedBy    String    // ID пользователя, загрузившего файл
+  uploadedAt    DateTime  @default(now())
+}
+
+// Сделки и воронки продаж
+model Pipeline {
+  id            String    @id @default(uuid())
+  name          String
+  description   String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Связи
+  stages        PipelineStage[]
+}
+
+model PipelineStage {
+  id            String    @id @default(uuid())
+  name          String
+  order         Int       // Для сортировки
+  color         String?   // Цвет для отображения
+  pipeline      Pipeline  @relation(fields: [pipelineId], references: [id])
+  pipelineId    String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Связи
+  deals         Deal[]
+}
+
+model Deal {
+  id            String    @id @default(uuid())
+  title         String
+  amount        Decimal?
+  description   String?
+  stage         PipelineStage @relation(fields: [stageId], references: [id])
+  stageId       String
+  client        Client    @relation(fields: [clientId], references: [id])
+  clientId      String
+  assignedTo    User?     @relation("AssignedToUser", fields: [assignedToId], references: [id])
+  assignedToId  String?
+  partner       Partner?  @relation(fields: [partnerId], references: [id])
+  partnerId     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Связи
+  history       DealHistory[]
+  comments      DealComment[]
+  attachments   DealAttachment[]
+}
+
+model DealHistory {
+  id            String    @id @default(uuid())
+  deal          Deal      @relation(fields: [dealId], references: [id])
+  dealId        String
+  field         String    // Измененное поле
+  oldValue      String?   // Старое значение
+  newValue      String?   // Новое значение
+  changedBy     String    // ID пользователя, внесшего изменение
+  changedAt     DateTime  @default(now())
+}
+
+model DealComment {
+  id            String    @id @default(uuid())
+  deal          Deal      @relation(fields: [dealId], references: [id])
+  dealId        String
+  content       String
+  createdBy     String    // ID пользователя, создавшего комментарий
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model DealAttachment {
+  id            String    @id @default(uuid())
+  deal          Deal      @relation(fields: [dealId], references: [id])
+  dealId        String
+  filename      String
+  originalName  String
+  mimeType      String
+  size          Int
+  path          String
+  uploadedBy    String    // ID пользователя, загрузившего файл
+  uploadedAt    DateTime  @default(now())
+}

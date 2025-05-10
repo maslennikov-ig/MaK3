@@ -1,0 +1,49 @@
+{
+  "name": "mak3-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,md}\""
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@mantine/core": "^6.0.17",
+    "@mantine/dates": "^6.0.17",
+    "@mantine/form": "^6.0.17",
+    "@mantine/hooks": "^6.0.17",
+    "@mantine/notifications": "^6.0.17",
+    "@tanstack/react-table": "^8.9.3",
+    "@dnd-kit/core": "^6.0.8",
+    "@dnd-kit/sortable": "^7.0.2",
+    "axios": "^1.4.0",
+    "dayjs": "^1.11.9",
+    "jwt-decode": "^3.1.2",
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.45.2",
+    "recharts": "^2.7.2",
+    "socket.io-client": "^4.7.1",
+    "zod": "^3.21.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.5",
+    "@types/react": "^18.2.17",
+    "@types/react-dom": "^18.2.7",
+    "@typescript-eslint/eslint-plugin": "^6.2.0",
+    "@typescript-eslint/parser": "^6.2.0",
+    "eslint": "^8.46.0",
+    "eslint-config-next": "^14.0.0",
+    "eslint-config-prettier": "^8.9.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.1.6"
+  }
+}

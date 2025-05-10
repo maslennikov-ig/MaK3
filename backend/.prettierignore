@@ -1,0 +1,9 @@
+.nest
+node_modules
+build
+dist
+coverage
+.vercel
+.github
+.husky
+prisma/migrations
