@@ -124,4 +124,34 @@ export class UsersService {
       data: { role },
     });
   }
+
+  /**
+   * Проверка, может ли пользователь управлять другим пользователем
+   * @param userId ID пользователя, который хочет управлять
+   * @param targetId ID целевого пользователя
+   * @returns Объект с результатом проверки
+   */
+  async canManageUser(
+    userId: string,
+    targetId: string
+  ): Promise<{ canManage: boolean; reason?: string }> {
+    // Получаем данные обоих пользователей
+    const [user, targetUser] = await Promise.all([this.findById(userId), this.findById(targetId)]);
+
+    // Администратор может управлять всеми пользователями
+    if (user.role === UserRole.ADMIN) {
+      return { canManage: true };
+    }
+
+    // Менеджер может управлять обычными пользователями
+    if (user.role === UserRole.MANAGER && targetUser.role === UserRole.USER) {
+      return { canManage: true };
+    }
+
+    // В остальных случаях управление запрещено
+    return {
+      canManage: false,
+      reason: 'Недостаточно прав для управления этим пользователем',
+    };
+  }
 }
