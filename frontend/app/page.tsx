@@ -9,7 +9,8 @@ export default function Home() {
           MaK 3 CRM
         </Title>
         <Text size="lg" align="center" maw={600}>
-          Современная CRM-система для автоматизации и стандартизации бизнес-процессов в сфере кредитного брокериджа
+          Современная CRM-система для автоматизации и стандартизации бизнес-процессов в сфере
+          кредитного брокериджа
         </Text>
         <Group mt="xl">
           <Button component={Link} href="/login" size="lg">

@@ -1,7 +1,12 @@
-import { useState } from 'react';
+'use client';
+
+import { useEffect } from 'react';
 import { useForm } from '@mantine/form';
-import { TextInput, PasswordInput, Button, Group, Anchor, Stack, Text } from '@mantine/core';
+import { TextInput, PasswordInput, Button, Group, Anchor, Stack, Text, Alert } from '@mantine/core';
+import { IconAlertCircle } from '@tabler/icons-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/authStore';
 
 interface RegisterFormValues {
   email: string;
@@ -12,7 +17,8 @@ interface RegisterFormValues {
 }
 
 export default function RegisterForm() {
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const { register, isLoading, error, isAuthenticated, clearError } = useAuthStore();
 
   const form = useForm<RegisterFormValues>({
     initialValues: {
@@ -23,32 +29,46 @@ export default function RegisterForm() {
       confirmPassword: '',
     },
     validate: {
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Некорректный email'),
-      firstName: (value) => (value.length > 0 ? null : 'Имя обязательно'),
-      lastName: (value) => (value.length > 0 ? null : 'Фамилия обязательна'),
-      password: (value) => (value.length >= 6 ? null : 'Пароль должен содержать минимум 6 символов'),
+      email: value => (/^\S+@\S+$/.test(value) ? null : 'Некорректный email'),
+      firstName: value => (value.length > 0 ? null : 'Имя обязательно'),
+      lastName: value => (value.length > 0 ? null : 'Фамилия обязательна'),
+      password: value => (value.length >= 6 ? null : 'Пароль должен содержать минимум 6 символов'),
       confirmPassword: (value, values) =>
         value === values.password ? null : 'Пароли не совпадают',
     },
   });
 
-  const handleSubmit = async (values: RegisterFormValues) => {
-    setLoading(true);
-    try {
-      // Здесь будет логика регистрации
-      console.log('Register values:', values);
-      // Имитация задержки для демонстрации состояния загрузки
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    } catch (error) {
-      console.error('Register error:', error);
-    } finally {
-      setLoading(false);
+  // Очищаем ошибку при изменении формы
+  useEffect(() => {
+    if (error) {
+      clearError();
     }
+  }, [form.values, error, clearError]);
+
+  // Редирект после успешной аутентификации
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, router]);
+
+  const handleSubmit = async (values: RegisterFormValues) => {
+    await register({
+      email: values.email,
+      firstName: values.firstName,
+      lastName: values.lastName,
+      password: values.password,
+    });
   };
 
   return (
     <form onSubmit={form.onSubmit(handleSubmit)}>
       <Stack spacing="md">
+        {error && (
+          <Alert icon={<IconAlertCircle size={16} />} title="Ошибка" color="red" variant="filled">
+            {error}
+          </Alert>
+        )}
         <TextInput
           required
           label="Email"
@@ -57,12 +77,7 @@ export default function RegisterForm() {
         />
 
         <Group grow>
-          <TextInput
-            required
-            label="Имя"
-            placeholder="Иван"
-            {...form.getInputProps('firstName')}
-          />
+          <TextInput required label="Имя" placeholder="Иван" {...form.getInputProps('firstName')} />
           <TextInput
             required
             label="Фамилия"
@@ -85,7 +100,7 @@ export default function RegisterForm() {
           {...form.getInputProps('confirmPassword')}
         />
 
-        <Button type="submit" fullWidth loading={loading}>
+        <Button type="submit" fullWidth loading={isLoading}>
           Зарегистрироваться
         </Button>
 

@@ -1,3 +1,5 @@
+'use client';
+
 import { Container, Title, Text, Paper, Stack } from '@mantine/core';
 import LoginForm from '@/components/forms/LoginForm';
 

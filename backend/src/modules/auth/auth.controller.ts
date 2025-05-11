@@ -49,7 +49,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Выход из системы' })
   @ApiResponse({ status: 200, description: 'Успешный выход' })
-  async logout(@Request() req) {
+  async logout(@Request() _req: Record<string, unknown>) {
     return this.authService.logout();
   }
 }

@@ -3,21 +3,25 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { BullModule } from '@nestjs/bullmq';
-import { AuthModule } from './modules/auth/auth.module';
-import { UsersModule } from './modules/users/users.module';
-import { ClientsModule } from './modules/clients/clients.module';
+import { AuthModule } from './auth/auth.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { ContactsModule } from './modules/contacts/contacts.module';
+import { FilesModule } from './modules/files/files.module';
+import { PipelinesModule } from './modules/pipelines/pipelines.module';
 import { DealsModule } from './modules/deals/deals.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
-import { PrismaModule } from './prisma/prisma.module';
+import { validate } from './config/env.validation';
 
 @Module({
   imports: [
-    // Конфигурация
+    // Конфигурация с валидацией переменных окружения
     ConfigModule.forRoot({
       isGlobal: true,
+      validate,
+      cache: true,
     }),
-    
+
     // JWT
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -30,7 +34,7 @@ import { PrismaModule } from './prisma/prisma.module';
         },
       }),
     }),
-    
+
     // BullMQ для очередей
     BullModule.forRootAsync({
       imports: [ConfigModule],
@@ -42,12 +46,13 @@ import { PrismaModule } from './prisma/prisma.module';
         },
       }),
     }),
-    
+
     // Модули приложения
     PrismaModule,
     AuthModule,
-    UsersModule,
-    ClientsModule,
+    ContactsModule,
+    FilesModule,
+    PipelinesModule,
     DealsModule,
   ],
   providers: [

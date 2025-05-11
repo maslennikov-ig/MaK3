@@ -1,10 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { MantineProvider, ColorSchemeScript } from '@mantine/core';
-import '@mantine/core/styles.css';
-import '@mantine/dates/styles.css';
-import '@mantine/notifications/styles.css';
+import 'dayjs/locale/ru';
 import './globals.css';
+import ClientProviders from '@/components/providers/ClientProviders';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'] });
 
@@ -20,13 +18,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <head>
-        <ColorSchemeScript />
-      </head>
+      <head />
       <body className={inter.className}>
-        <MantineProvider defaultColorScheme="light">
-          {children}
-        </MantineProvider>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );
