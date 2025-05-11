@@ -1,7 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { RegisterDto } from '../auth/dto/register.dto';
+import { UserRole } from './models/user.model';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -10,7 +12,7 @@ export class UsersService {
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      include: { role: true },
+      // Поле role в схеме Prisma является строкой, а не связью
     });
 
     if (!user) {
@@ -23,71 +25,76 @@ export class UsersService {
   async findByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
-      include: { role: true },
+      // Поле role в схеме Prisma является строкой, а не связью
     });
   }
 
-  async create(registerDto: RegisterDto) {
-    // Хешируем пароль
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(registerDto.password, saltRounds);
-
-    // Находим роль "MANAGER" (по умолчанию для новых пользователей)
-    const managerRole = await this.prisma.role.findUnique({
-      where: { name: 'MANAGER' },
+  async findAll() {
+    return this.prisma.user.findMany({
+      // Поле role в схеме Prisma является строкой, а не связью
     });
+  }
 
-    if (!managerRole) {
-      // Если роль не найдена, создаем ее
-      const createdRole = await this.prisma.role.create({
-        data: {
-          name: 'MANAGER',
-          description: 'Менеджер системы',
-        },
-      });
-
-      // Создаем пользователя с новой ролью
-      return this.prisma.user.create({
-        data: {
-          email: registerDto.email,
-          passwordHash,
-          firstName: registerDto.firstName,
-          lastName: registerDto.lastName,
-          roleId: createdRole.id,
-        },
-        include: { role: true },
-      });
+  async create(createUserDto: CreateUserDto) {
+    // Проверяем, существует ли пользователь с таким email
+    const existingUser = await this.findByEmail(createUserDto.email);
+    if (existingUser) {
+      throw new BadRequestException(`Пользователь с email ${createUserDto.email} уже существует`);
     }
 
-    // Создаем пользователя с существующей ролью
-    return this.prisma.user.create({
+    // Хешируем пароль
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(createUserDto.password, saltRounds);
+
+    // Создаем пользователя
+    const newUser = await this.prisma.user.create({
       data: {
-        email: registerDto.email,
-        passwordHash,
-        firstName: registerDto.firstName,
-        lastName: registerDto.lastName,
-        roleId: managerRole.id,
+        email: createUserDto.email,
+        password: hashedPassword,
+        firstName: createUserDto.firstName,
+        lastName: createUserDto.lastName,
+        role: createUserDto.role || UserRole.USER,
+        isActive: true,
       },
-      include: { role: true },
+      // Поле role в схеме Prisma является строкой, а не связью
     });
+
+    // Исключаем пароль из возвращаемого объекта
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _password, ...result } = newUser;
+    return result;
   }
 
-  async update(id: string, updateData: any) {
+  async update(id: string, updateUserDto: UpdateUserDto) {
     // Проверяем, существует ли пользователь
     await this.findById(id);
 
+    // Подготавливаем данные для обновления
+    const updateData: Record<string, unknown> = {};
+
+    // Копируем все поля из DTO, кроме пароля
+    if (updateUserDto.email) updateData.email = updateUserDto.email;
+    if (updateUserDto.firstName) updateData.firstName = updateUserDto.firstName;
+    if (updateUserDto.lastName) updateData.lastName = updateUserDto.lastName;
+    if (updateUserDto.role) updateData.role = updateUserDto.role;
+    if (updateUserDto.isActive !== undefined) updateData.isActive = updateUserDto.isActive;
+
     // Если в данных для обновления есть пароль, хешируем его
-    if (updateData.password) {
+    if (updateUserDto.password) {
       const saltRounds = 10;
-      updateData.passwordHash = await bcrypt.hash(updateData.password, saltRounds);
-      delete updateData.password;
+      updateData.password = await bcrypt.hash(updateUserDto.password, saltRounds);
     }
 
-    return this.prisma.user.update({
+    // Обновляем пользователя
+    const updatedUser = await this.prisma.user.update({
       where: { id },
       data: updateData,
-      include: { role: true },
     });
+
+    // Исключаем пароль из возвращаемого объекта
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _password, ...result } = updatedUser;
+    return result;
   }
 
   async remove(id: string) {
@@ -99,9 +106,22 @@ export class UsersService {
     });
   }
 
-  async findAll() {
-    return this.prisma.user.findMany({
-      include: { role: true },
+  /**
+   * Назначение роли пользователю
+   */
+  async assignRole(userId: string, role: UserRole): Promise<Record<string, unknown>> {
+    // Проверяем, существует ли пользователь
+    await this.findById(userId);
+
+    // Проверяем валидность роли
+    if (!Object.values(UserRole).includes(role)) {
+      throw new BadRequestException(`Роль ${role} не существует`);
+    }
+
+    // Обновляем роль пользователя
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { role },
     });
   }
 }
